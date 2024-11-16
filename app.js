@@ -1,115 +1,115 @@
-//import express from 'express';
 const express = require('express');
-
-//import createClient from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
-//import {createClient} from '@supabase/supabase-js'
 const supabaseClient = require('@supabase/supabase-js');
-
-//import morgan from 'morgan';
 const morgan = require('morgan');
-
-//import bodyParser from "body-parser";
 const bodyParser = require('body-parser');
-
-//import { createClient } from "https://cdn.skypack.dev/@supabase/supabase-js";
+const cors = require('cors');
 
 const app = express();
 
-const cors=require("cors");
-const corsOptions ={
-   origin:'*', 
-   credentials:true,            //access-control-allow-credentials:true
-   optionSuccessStatus:200,
-}
+// Configurações do CORS
+const corsOptions = {
+    origin: '*',
+    credentials: true,
+    optionSuccessStatus: 200,
+};
+app.use(cors(corsOptions));
 
-app.use(cors(corsOptions)) // Use this after the variable declaration
-
-
-// using morgan for logs
+// Middleware
 app.use(morgan('combined'));
-
-app.use(bodyParser.urlencoded({extended: true}));
+app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
-const supabase = 
-    supabaseClient.createClient('https://dapcbwlprdzrlftsotrd.supabase.co', 
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRhcGNid2xwcmR6cmxmdHNvdHJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzA3NTg1NTQsImV4cCI6MjA0NjMzNDU1NH0.dIUwd7KoLPB_Rm_TY6TyQnkQc38ikS1kCY_RzBaFwX0')
+// Configuração do cliente Supabase
+const supabase = supabaseClient.createClient(
+    'https://cxppcmhsklytddapemsg.supabase.co/',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN4cHBjbWhza2x5dGRkYXBlbXNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzA3NTg2MjksImV4cCI6MjA0NjMzNDYyOX0.qy6bqbsahdXHKNtuUTV6AbwankgSGoFl5_hXA2eNmY0'
+);
 
-
+// Consultar todos os produtos
 app.get('/products', async (req, res) => {
-    const {data, error} = await supabase
-        .from('products')
-        .select()
-    res.send(data);
-    console.log(`lists all products${data}`);
+    try {
+        const { data, error } = await supabase.from('products').select();
+        if (error) throw error;
+        res.status(200).json(data);
+        console.log('Listando todos os produtos:', data);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+        console.error('Erro ao listar produtos:', error.message);
+    }
 });
 
+// Consultar um produto por ID
 app.get('/products/:id', async (req, res) => {
-    console.log("id = " + req.params.id);
-    const {data, error} = await supabase
-        .from('products')
-        .select()
-        .eq('id', req.params.id)
-    res.send(data);
-
-    console.log("retorno "+ data);
+    try {
+        const { id } = req.params;
+        const { data, error } = await supabase.from('products').select().eq('id', id).single();
+        if (error) throw error;
+        res.status(200).json(data);
+        console.log('Produto retornado:', data);
+    } catch (error) {
+        res.status(404).json({ error: error.message });
+        console.error('Erro ao buscar produto:', error.message);
+    }
 });
 
+// Cadastrar um produto
 app.post('/products', async (req, res) => {
-    const {error} = await supabase
-        .from('products')
-        .insert({
-            name: req.body.name,
-            description: req.body.description,
-            price: req.body.price,
-        })
-    if (error) {
-        res.send(error);
+    try {
+        const { name, description, price } = req.body;
+        const { error } = await supabase.from('products').insert([{ name, description, price }]);
+        if (error) throw error;
+        res.status(201).send('Produto criado com sucesso!');
+        console.log('Produto criado:', { name, description, price });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+        console.error('Erro ao criar produto:', error.message);
     }
-    res.send("created!!");
-    console.log("retorno "+ req.body.name);
-    console.log("retorno "+ req.body.description);
-    console.log("retorno "+ req.body.price);
-
 });
 
+// Atualizar um produto
 app.put('/products/:id', async (req, res) => {
-    const {error} = await supabase
-        .from('products')
-        .update({
-            name: req.body.name,
-            description: req.body.description,
-            price: req.body.price
-        })
-        .eq('id', req.params.id)
-    if (error) {
-        res.send(error);
+    try {
+        const { id } = req.params;
+        const { name, description, price } = req.body;
+        const { error } = await supabase
+            .from('products')
+            .update({ name, description, price })
+            .eq('id', id);
+        if (error) throw error;
+        res.status(200).send('Produto atualizado com sucesso!');
+        console.log('Produto atualizado:', { id, name, description, price });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+        console.error('Erro ao atualizar produto:', error.message);
     }
-    res.send("updated!!");
 });
 
+// Deletar um produto
 app.delete('/products/:id', async (req, res) => {
-    console.log("delete: " + req.params.id);
-    const {error} = await supabase
-        .from('products')
-        .delete()
-        .eq('id', req.params.id)
-    if (error) {
-        res.send(error);
+    try {
+        const { id } = req.params;
+        const { error } = await supabase.from('products').delete().eq('id', id);
+        if (error) throw error;
+        res.status(200).send('Produto deletado com sucesso!');
+        console.log('Produto deletado:', id);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+        console.error('Erro ao deletar produto:', error.message);
     }
-    res.send("deleted!!")
-    console.log("delete: " + req.params.id);
-
 });
 
+// Rota inicial
 app.get('/', (req, res) => {
-    res.send("Hello I am working my friend Supabase <3");
+    res.send('API Supabase funcionando! 🌟');
 });
 
+// Rota para capturar outras rotas não definidas
 app.get('*', (req, res) => {
-    res.send("Hello again I am working my friend to the moon and behind <3");
+    res.status(404).send('Rota não encontrada.');
 });
 
+// Iniciar servidor
 app.listen(3000, () => {
-    console.log(`> Ready on http://localhost:3000`);
+    console.log('Servidor iniciado em http://localhost:3000');
 });
+
